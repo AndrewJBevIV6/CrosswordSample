@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -15,6 +16,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +36,7 @@ public class HelloApplication extends Application {
         GridPane gridPane = grid;
         gridPane.add(highlight.get(), 0,0);
         gridPane.setOnKeyPressed(gridKeyPressed);
-        Scene scene = new Scene(gridPane, 800, 800);
+        Scene scene = new Scene(gridPane, 700, 700);
         stage.setTitle("Crossword puzzle maker");
         stage.setScene(scene);
         stage.show();
@@ -42,7 +44,7 @@ public class HelloApplication extends Application {
     }
 
     public Supplier<Label> newLabel = () -> {
-        Label label = new Label("SQUARE");
+        Label label = new Label("Ο");
         label.setFont(Font.font("Arial", FontWeight.BOLD, 30.0));
         label.setBackground(Background.fill(Color.BLACK));
         return label;
@@ -50,6 +52,16 @@ public class HelloApplication extends Application {
 
     public SimpleObjectProperty<Node> highlight = new SimpleObjectProperty<>(this, "highlight", newLabel.get());
     public GridPane grid = new GridPane();
+    public enum CellTraversal {
+        LEFT(pair -> new Pair<>(pair.getKey()-1, pair.getValue())),
+        RIGHT(pair -> new Pair<>(pair.getKey()+1, pair.getValue())),
+        UP(pair -> new Pair<>(pair.getKey(), pair.getValue()-1)),
+        DOWN(pair -> new Pair<>(pair.getKey(), pair.getValue()+1));
+        public final UnaryOperator<Pair<Integer, Integer>> traversal;
+        CellTraversal(UnaryOperator<Pair<Integer, Integer>> traversal) {
+            this.traversal = traversal;
+        }
+    }
 
     public EventHandler<? super KeyEvent> gridKeyPressed = (EventHandler<KeyEvent>) keyEvent -> {
         Integer i = GridPane.getRowIndex(highlight.get());
@@ -71,7 +83,8 @@ public class HelloApplication extends Application {
                     for (int k = 0; k < R; k++) {
                         nodes.add(newLabel.get());
                     }
-                    grid.addColumn(j-1, nodes.toArray(new Node[]{}));
+                    //grid.addColumn(j-1, nodes.toArray(new Node[]{}));
+                    insertColumn(grid, j-1, nodes.toArray(new Node[]{}));
                 }
                 highlight.set(getInGrid(grid, i, c.apply(j - 1)));
             }
@@ -81,7 +94,8 @@ public class HelloApplication extends Application {
                     for (int k = 0; k < R; k++) {
                         nodes.add(newLabel.get());
                     }
-                    grid.addColumn(j+1, nodes.toArray(new Node[]{}));
+                    //grid.addColumn(j+1, nodes.toArray(new Node[]{}));
+                    insertColumn(grid, j+1, nodes.toArray(new Node[]{}));
                 }
                 highlight.set(getInGrid(grid, i, c.apply(j + 1)));
             }
@@ -91,7 +105,8 @@ public class HelloApplication extends Application {
                     for (int k = 0; k < C; k++) {
                         nodes.add(newLabel.get());
                     }
-                    grid.addRow(i-1, nodes.toArray(new Node[]{}));
+                    //grid.addRow(i-1, nodes.toArray(new Node[]{}));
+                    insertRow(grid, i-1, nodes.toArray(new Node[]{}));
                 }
                 highlight.set(getInGrid(grid, r.apply(i - 1), j));
             }
@@ -101,7 +116,8 @@ public class HelloApplication extends Application {
                     for (int k = 0; k < C; k++) {
                         nodes.add(newLabel.get());
                     }
-                    grid.addRow(i+1, nodes.toArray(new Node[]{}));
+                    //grid.addRow(i+1, nodes.toArray(new Node[]{}));
+                    insertRow(grid, i+1, nodes.toArray(new Node[]{}));
                 }
                 highlight.set(getInGrid(grid, r.apply(i + 1), j));
             }
@@ -111,6 +127,22 @@ public class HelloApplication extends Application {
     public Node getInGrid(GridPane pane, int row, int col) {
         Optional<Node> any = pane.getChildren().stream().filter(node -> GridPane.getRowIndex(node) == row && GridPane.getColumnIndex(node) == col).findAny();
         return any.get();
+    }
+
+    public void insertRow(GridPane pane, int i, Node... nodes) {
+        pane.getChildren().forEach(node -> {
+            Integer index = GridPane.getRowIndex(node);
+            if (index>=i) GridPane.setRowIndex(node, index+1);
+        });
+        pane.addRow(i, nodes);
+    }
+
+    public void insertColumn(GridPane pane, int j, Node... nodes) {
+        pane.getChildren().forEach(node -> {
+            Integer index = GridPane.getColumnIndex(node);
+            if (index>=j) GridPane.setColumnIndex(node, index+1);
+        });
+        pane.addColumn(j, nodes);
     }
 
     public static void main(String[] args) {
