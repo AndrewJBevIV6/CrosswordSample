@@ -9,6 +9,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.GridPane;
@@ -20,6 +21,8 @@ import javafx.util.Pair;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -55,14 +58,25 @@ public class HelloApplication extends Application {
     public SimpleObjectProperty<Node> highlight = new SimpleObjectProperty<>(this, "highlight", newLabel.get());
     public GridPane grid = new GridPane();
     public enum CellTraversal {
-        LEFT(pair -> new Pair<>(pair.getKey()-1, pair.getValue())),
-        RIGHT(pair -> new Pair<>(pair.getKey()+1, pair.getValue())),
-        UP(pair -> new Pair<>(pair.getKey(), pair.getValue()-1)),
-        DOWN(pair -> new Pair<>(pair.getKey(), pair.getValue()+1));
+        LEFT(pair -> new Pair<>(pair.getKey()-1, pair.getValue()), pair -> new Pair<>(pair.getKey()+1, pair.getValue())),
+        RIGHT(pair -> new Pair<>(pair.getKey()+1, pair.getValue()), pair -> new Pair<>(pair.getKey()-1, pair.getValue())),
+        UP(pair -> new Pair<>(pair.getKey(), pair.getValue()-1), pair -> new Pair<>(pair.getKey(), pair.getValue()+1)),
+        DOWN(pair -> new Pair<>(pair.getKey(), pair.getValue()+1), pair -> new Pair<>(pair.getKey(), pair.getValue()-1));
         public final UnaryOperator<Pair<Integer, Integer>> traversal;
+        public UnaryOperator<Pair<Integer, Integer>> inverse;
         CellTraversal(UnaryOperator<Pair<Integer, Integer>> traversal) {
             this.traversal = traversal;
         }
+        CellTraversal(UnaryOperator<Pair<Integer, Integer>> traversal, UnaryOperator<Pair<Integer, Integer>> inverse) {
+            this.traversal = traversal;
+            this.inverse = inverse;
+        }
+        public static HashMap<CellTraversal, CellTraversal> inverses = new HashMap<>(Map.ofEntries(
+                Map.entry(LEFT, RIGHT),
+                Map.entry(RIGHT, LEFT),
+                Map.entry(UP, DOWN),
+                Map.entry(DOWN, UP)
+        ));
     }
     public CellTraversal typingTraversal = CellTraversal.RIGHT;
 
@@ -77,6 +91,13 @@ public class HelloApplication extends Application {
             ((Label) highlight.get()).setText(keyEvent.getText());
             ((Label) highlight.get()).setBackground(Background.fill(Color.LAVENDER));
             Pair<Integer, Integer> traversed = typingTraversal.traversal.apply(new Pair<>(j, i));
+            highlight.set(getInGrid(grid, r.apply(traversed.getValue()), c.apply(traversed.getKey())));
+            return;
+        }
+        if (keyEvent.getCode()== KeyCode.BACK_SPACE) {
+            ((Label) highlight.get()).setText("");
+            ((Label) highlight.get()).setBackground(Background.fill(Color.LAVENDER));
+            Pair<Integer, Integer> traversed = typingTraversal.inverse.apply(new Pair<>(j, i));
             highlight.set(getInGrid(grid, r.apply(traversed.getValue()), c.apply(traversed.getKey())));
             return;
         }
