@@ -44,9 +44,11 @@ public class HelloApplication extends Application {
     }
 
     public Supplier<Label> newLabel = () -> {
-        Label label = new Label("Ο");
+        Label label = new Label("");
         label.setFont(Font.font("Arial", FontWeight.BOLD, 30.0));
         label.setBackground(Background.fill(Color.BLACK));
+        label.setMinWidth(40);
+        label.setMinHeight(40);
         return label;
     };
 
