@@ -62,6 +62,7 @@ public class HelloApplication extends Application {
             this.traversal = traversal;
         }
     }
+    public CellTraversal typingTraversal = CellTraversal.RIGHT;
 
     public EventHandler<? super KeyEvent> gridKeyPressed = (EventHandler<KeyEvent>) keyEvent -> {
         Integer i = GridPane.getRowIndex(highlight.get());
@@ -73,10 +74,17 @@ public class HelloApplication extends Application {
         if (keyEvent.getCode().isLetterKey()) {
             ((Label) highlight.get()).setText(keyEvent.getText());
             ((Label) highlight.get()).setBackground(Background.fill(Color.LAVENDER));
-            highlight.set(getInGrid(grid, i, c.apply(j + 1)));
+            Pair<Integer, Integer> traversed = typingTraversal.traversal.apply(new Pair<>(j, i));
+            highlight.set(getInGrid(grid, r.apply(traversed.getValue()), c.apply(traversed.getKey())));
             return;
         }
         switch (keyEvent.getCode()) {
+            case NUMPAD2 -> {
+                typingTraversal = CellTraversal.DOWN;
+            }
+            case NUMPAD6 -> {
+                typingTraversal = CellTraversal.RIGHT;
+            }
             case LEFT -> {
                 if (keyEvent.isShiftDown()) {
                     ArrayList<Node> nodes = new ArrayList<>();
