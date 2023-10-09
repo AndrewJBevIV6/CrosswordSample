@@ -4,7 +4,9 @@ import javafx.application.Application;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -20,10 +22,7 @@ import javafx.stage.Stage;
 import javafx.util.Pair;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
@@ -32,12 +31,21 @@ public class HelloApplication extends Application {
     public void start(Stage stage) throws IOException {
         //FXMLLoader fxmlLoader = new FXMLLoader(HelloApplication.class.getResource("hello-view.fxml"));
         //Scene scene = new Scene(fxmlLoader.load(), 320, 240);
+        highlight.set(newLabel.get());
         highlight.addListener((observableValue, node, t1) -> {
-            ((Label) node).setBackground(Background.fill(Color.BLACK));
-            ((Label) t1).setBackground(Background.fill(Color.BEIGE));
+            String nodeText = ((Label) node).getText();
+            String t1Text = ((Label) t1).getText();
+            ((Label) node).setText("@");
+            ((Label) t1).setText("@");
+            ((Label) node).setText(nodeText);
+            ((Label) t1).setText(t1Text);
+            //((Label) node).setBackground(Background.fill(Color.BLACK));
+            //((Label) t1).setBackground(Background.fill(Color.BEIGE));
         });
         GridPane gridPane = grid;
+        gridPane.setPadding(new Insets(5.0,5.0,5.0,5.0));
         gridPane.add(highlight.get(), 0,0);
+        GridPane.setMargin(highlight.get(), insets);
         gridPane.setOnKeyPressed(gridKeyPressed);
         Scene scene = new Scene(gridPane, 700, 700);
         stage.setTitle("Crossword puzzle maker");
@@ -46,16 +54,29 @@ public class HelloApplication extends Application {
         grid.requestFocus();
     }
 
+    public SimpleObjectProperty<Node> highlight = new SimpleObjectProperty<>(this, "highlight", new Label());
+
     public Supplier<Label> newLabel = () -> {
         Label label = new Label("");
         label.setFont(Font.font("Arial", FontWeight.BOLD, 30.0));
         label.setBackground(Background.fill(Color.BLACK));
         label.setMinWidth(40);
         label.setMinHeight(40);
+        label.setAlignment(Pos.CENTER);
+        label.backgroundProperty().bind(label.textProperty().map(s -> {
+            if (Objects.equals(getHighlight(s), label)) return Background.fill(Color.LAVENDER);
+            return Background.fill(s.isEmpty() ? Color.BLACK : Color.BEIGE);
+        }));
         return label;
     };
+    public Node getHighlight(String s) {
+        if (highlight == null) {
+            return null;
+        }
+        return highlight.get();
+    }
 
-    public SimpleObjectProperty<Node> highlight = new SimpleObjectProperty<>(this, "highlight", newLabel.get());
+    public Insets insets = new Insets(0.3,0.3,0.3,0.3);
     public GridPane grid = new GridPane();
     public enum CellTraversal {
         LEFT(pair -> new Pair<>(pair.getKey()-1, pair.getValue()), pair -> new Pair<>(pair.getKey()+1, pair.getValue())),
@@ -89,14 +110,14 @@ public class HelloApplication extends Application {
         UnaryOperator<Integer> c = J -> (J % grid.getColumnCount() + grid.getColumnCount()) % grid.getColumnCount();
         if (keyEvent.getCode().isLetterKey()) {
             ((Label) highlight.get()).setText(keyEvent.getText());
-            ((Label) highlight.get()).setBackground(Background.fill(Color.LAVENDER));
+            //((Label) highlight.get()).setBackground(Background.fill(Color.LAVENDER));
             Pair<Integer, Integer> traversed = typingTraversal.traversal.apply(new Pair<>(j, i));
             highlight.set(getInGrid(grid, r.apply(traversed.getValue()), c.apply(traversed.getKey())));
             return;
         }
         if (keyEvent.getCode()== KeyCode.BACK_SPACE) {
             ((Label) highlight.get()).setText("");
-            ((Label) highlight.get()).setBackground(Background.fill(Color.LAVENDER));
+            //((Label) highlight.get()).setBackground(Background.fill(Color.LAVENDER));
             Pair<Integer, Integer> traversed = typingTraversal.inverse.apply(new Pair<>(j, i));
             highlight.set(getInGrid(grid, r.apply(traversed.getValue()), c.apply(traversed.getKey())));
             return;
@@ -166,6 +187,7 @@ public class HelloApplication extends Application {
             if (index>=i) GridPane.setRowIndex(node, index+1);
         });
         pane.addRow(i, nodes);
+        Arrays.stream(nodes).forEach(node -> GridPane.setMargin(node, insets));
     }
 
     public void insertColumn(GridPane pane, int j, Node... nodes) {
@@ -174,6 +196,7 @@ public class HelloApplication extends Application {
             if (index>=j) GridPane.setColumnIndex(node, index+1);
         });
         pane.addColumn(j, nodes);
+        Arrays.stream(nodes).forEach(node -> GridPane.setMargin(node, insets));
     }
 
     public static void main(String[] args) {
