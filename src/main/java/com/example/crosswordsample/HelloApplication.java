@@ -23,8 +23,10 @@ import javafx.util.Pair;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import java.util.stream.Stream;
 
 public class HelloApplication extends Application {
     @Override
@@ -52,6 +54,7 @@ public class HelloApplication extends Application {
         stage.setScene(scene);
         stage.show();
         grid.requestFocus();
+        TutorialScreen tutorialScreen = new TutorialScreen().displayOne();
     }
 
     public SimpleObjectProperty<Node> highlight = new SimpleObjectProperty<>(this, "highlight", new Label());
@@ -67,6 +70,7 @@ public class HelloApplication extends Application {
             if (Objects.equals(getHighlight(s), label)) return Background.fill(Color.LAVENDER);
             return Background.fill(s.isEmpty() ? Color.BLACK : Color.BEIGE);
         }));
+        label.setOnMouseClicked(mouseEvent -> highlight.set(label));
         return label;
     };
     public Node getHighlight(String s) {
@@ -201,5 +205,49 @@ public class HelloApplication extends Application {
 
     public static void main(String[] args) {
         launch();
+    }
+}
+
+class Utils {
+    public static Supplier<Label> newLabel = () -> {
+        Label label = new Label("");
+        label.setFont(Font.font("Arial", FontWeight.BOLD, 30.0));
+        label.setBackground(Background.fill(Color.AZURE));
+        label.setMinWidth(40);
+        label.setMinHeight(40);
+        label.setAlignment(Pos.CENTER);
+        return label;
+    };
+}
+
+class TutorialScreen {
+    public GridPane grid;
+    public Scene scene;
+    public Stage stage;
+
+    public TutorialScreen() {
+        grid = new GridPane();
+        scene = new Scene(grid);
+        stage = new Stage();
+        stage.setScene(scene);
+    }
+
+    public TutorialScreen displayOne() {
+        Stream<String> stringStream = Stream.of("navigate cells", "add adjacent rows/columns", "enter letters into cells", "switch direction of entering letters");
+        grid.addColumn(0, stringStream.map(s -> {
+            Label label = Utils.newLabel.get();
+            label.setText(s);
+            label.setPadding(new Insets(10.0,10.0,10.0,10.0));
+            return label;
+        }).toArray(value -> new Node[4]));
+        stringStream = Stream.of("arrow keys", "shift + arrow keys", "A-Z", "comma, period");
+        grid.addColumn(1, stringStream.map(s -> {
+            Label label = Utils.newLabel.get();
+            label.setText(s);
+            label.setPadding(new Insets(10.0,10.0,10.0,10.0));
+            return label;
+        }).toArray(value -> new Node[4]));
+        stage.show();
+        return this;
     }
 }
