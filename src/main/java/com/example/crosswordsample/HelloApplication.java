@@ -13,8 +13,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.GridPane;
+import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
@@ -23,6 +22,7 @@ import javafx.util.Pair;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -53,8 +53,8 @@ public class HelloApplication extends Application {
         stage.setTitle("Crossword puzzle maker");
         stage.setScene(scene);
         stage.show();
+        TutorialScreen tutorialScreen = new TutorialScreen().displayOne().incorporateInWindow(stage, grid);
         grid.requestFocus();
-        TutorialScreen tutorialScreen = new TutorialScreen().displayOne();
     }
 
     public SimpleObjectProperty<Node> highlight = new SimpleObjectProperty<>(this, "highlight", new Label());
@@ -142,6 +142,9 @@ public class HelloApplication extends Application {
                     //grid.addColumn(j-1, nodes.toArray(new Node[]{}));
                     insertColumn(grid, j-1, nodes.toArray(new Node[]{}));
                 }
+                else if (keyEvent.isControlDown()) {
+                    deleteColumn(grid, j-1);
+                }
                 highlight.set(getInGrid(grid, i, c.apply(j - 1)));
             }
             case RIGHT -> {
@@ -152,6 +155,9 @@ public class HelloApplication extends Application {
                     }
                     //grid.addColumn(j+1, nodes.toArray(new Node[]{}));
                     insertColumn(grid, j+1, nodes.toArray(new Node[]{}));
+                }
+                else if (keyEvent.isControlDown()) {
+                    deleteColumn(grid, j+1);
                 }
                 highlight.set(getInGrid(grid, i, c.apply(j + 1)));
             }
@@ -164,6 +170,9 @@ public class HelloApplication extends Application {
                     //grid.addRow(i-1, nodes.toArray(new Node[]{}));
                     insertRow(grid, i-1, nodes.toArray(new Node[]{}));
                 }
+                else if (keyEvent.isControlDown()) {
+                    deleteRow(grid, i-1);
+                }
                 highlight.set(getInGrid(grid, r.apply(i - 1), j));
             }
             case DOWN -> {
@@ -174,6 +183,9 @@ public class HelloApplication extends Application {
                     }
                     //grid.addRow(i+1, nodes.toArray(new Node[]{}));
                     insertRow(grid, i+1, nodes.toArray(new Node[]{}));
+                }
+                else if (keyEvent.isControlDown()) {
+                    deleteRow(grid, i+1);
                 }
                 highlight.set(getInGrid(grid, r.apply(i + 1), j));
             }
@@ -203,6 +215,32 @@ public class HelloApplication extends Application {
         Arrays.stream(nodes).forEach(node -> GridPane.setMargin(node, insets));
     }
 
+    public void deleteRow(GridPane pane, int i) {
+        ArrayList<Node> toDelete = new ArrayList<>();
+        pane.getChildren().forEach(node -> {
+            Integer index = GridPane.getRowIndex(node);
+            if (index==i) toDelete.add(node);
+        });
+        toDelete.forEach(node -> pane.getChildren().remove(node));
+        pane.getChildren().forEach(node -> {
+            Integer index = GridPane.getRowIndex(node);
+            if (index>i) GridPane.setRowIndex(node, index-1);
+        });
+    }
+
+    public void deleteColumn(GridPane pane, int j) {
+        ArrayList<Node> toDelete = new ArrayList<>();
+        pane.getChildren().forEach(node -> {
+            Integer index = GridPane.getColumnIndex(node);
+            if (index==j) toDelete.add(node);
+        });
+        toDelete.forEach(node -> pane.getChildren().remove(node));
+        pane.getChildren().forEach(node -> {
+            Integer index = GridPane.getColumnIndex(node);
+            if (index>j) GridPane.setColumnIndex(node, index-1);
+        });
+    }
+
     public static void main(String[] args) {
         launch();
     }
@@ -218,6 +256,17 @@ class Utils {
         label.setAlignment(Pos.CENTER);
         return label;
     };
+
+    public static Function<String, Label> newLabelText = s -> {
+        Label label = newLabel.get();
+        label.setText(s);
+        return label;
+    };
+
+    public static Node getInGrid(GridPane pane, int row, int col) {
+        Optional<Node> any = pane.getChildren().stream().filter(node -> GridPane.getRowIndex(node) == row && GridPane.getColumnIndex(node) == col).findAny();
+        return any.get();
+    }
 }
 
 class TutorialScreen {
@@ -247,7 +296,47 @@ class TutorialScreen {
             label.setPadding(new Insets(10.0,10.0,10.0,10.0));
             return label;
         }).toArray(value -> new Node[4]));
-        stage.show();
+        grid.getChildren().remove(Utils.getInGrid(grid, 0,1));
+        Supplier<GridPane> arrowKeyGrid = () -> {
+            GridPane arrowKeySymbols = new GridPane();
+            arrowKeySymbols.add(Utils.newLabelText.apply("⮝"), 1,0);
+            arrowKeySymbols.add(Utils.newLabelText.apply("⮜"), 0,1);
+            arrowKeySymbols.add(Utils.newLabelText.apply("⮟"), 1,1);
+            arrowKeySymbols.add(Utils.newLabelText.apply("⮞"), 2,1);
+            arrowKeySymbols.getChildren().forEach(node -> ((Region) node).setPadding(new Insets(10.0,10.0,10.0,10.0)));
+            return arrowKeySymbols;
+        };
+        grid.add(arrowKeyGrid.get(), 1,0);
+        grid.getChildren().remove(Utils.getInGrid(grid,1,1));
+        GridPane shiftInstruction = new GridPane();
+        shiftInstruction.addRow(
+                0,
+                Utils.newLabelText.apply("shift"),
+                Utils.newLabelText.apply("+"),
+                arrowKeyGrid.get()
+        );
+        grid.add(shiftInstruction, 1,1);
+        Label label = Utils.newLabelText.apply("click anywhere to begin");
+        label.setFont(Font.font("Times new roman", 40.0));
+        grid.add(label, 0,5);
+        GridPane.setColumnSpan(label, 2);
+        label.setAlignment(Pos.CENTER);
+        return this;
+    }
+
+    public TutorialScreen incorporateInWindow(Stage stage, GridPane gridPane) {
+        gridPane.setVisible(false);
+        StackPane stackPane = new StackPane(grid, gridPane);
+        Scene scene1 = new Scene(stackPane);
+        grid.setOnMouseClicked(mouseEvent -> {
+            grid.setVisible(false);
+            gridPane.setVisible(true);
+            gridPane.requestFocus();
+            stage.setWidth(700);
+            stage.setHeight(700);
+
+        });
+        stage.setScene(scene1);
         return this;
     }
 }
